@@ -93,7 +93,7 @@ export default function SettingsScreen() {
         <T weight="medium" style={styles.copy}>
           Hesap yok. Ev, iş, not ve alınacaklar bu telefondan dışarı gitmez. Reklam için Google AdMob cihaz reklam kimliği ve reklam ölçümü kullanabilir. Kişisel veri satılmaz. Kayıtları silmek için aşağıdaki sıfırlamayı kullanırsın.
         </T>
-        <Button label="Gizlilik metnini aç" tone="quiet" onPress={() => Linking.openURL('https://ilkanakar.github.io/sergen/privacy.html')} />
+        <Button label="Gizlilik metnini aç" tone="quiet" onPress={() => Linking.openURL('https://ilkanakar.github.io/isbolumu/privacy.html')} />
       </View>
 
       <View style={styles.block}>
