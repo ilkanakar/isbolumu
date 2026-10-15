@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Sergen",
+    "slug": "sacak",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F3EDE3",
+    "scheme": "sacak",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ilkanakar.sergen",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSUserNotificationsUsageDescription": "Fatura, ev işi, emanet ve özel günlerden önce haber vermek için."
+      }
+    },
+    "android": {
+      "package": "com.ilkanakar.sergen",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#C65A3A"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F3EDE3",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#C65A3A"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3706056819475760~4227241305",
+          "iosAppId": "ca-app-pub-3706056819475760~7277085631",
+          "delayAppMeasurementInit": true
+        }
+      ]
+    ]
+  }
+}
