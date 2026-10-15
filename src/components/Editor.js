@@ -1,9 +1,6 @@
 import { createContext, useContext, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +16,7 @@ import {
 } from '../logic/dates.js';
 import { activePlace, emptyWeek, kindLabel, memberName, ruleLine, statusText, tasksOn } from '../logic/house.js';
 import { useHouse } from '../state/Store.js';
+import Popup from './Popup.js';
 import { billCategories, colors, memberColors } from '../theme.js';
 import T from './Type.js';
 import { Button, Chips, Field, Input } from './ui.js';
@@ -151,21 +149,16 @@ function MemberPick({ members, value, onChange }) {
 
 function Sheet({ title, children, onClose }) {
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <View style={styles.sheetHead}>
-            <T weight="serif" style={styles.sheetTitle}>{title}</T>
-            <Pressable accessibilityRole="button" onPress={onClose}><T weight="semi" style={styles.close}>Kapat</T></Pressable>
-          </View>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.sheetBody}>
-            {children}
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    <Popup onClose={onClose}>
+      <View style={styles.handle} />
+      <View style={styles.sheetHead}>
+        <T weight="serif" style={styles.sheetTitle}>{title}</T>
+        <Pressable accessibilityRole="button" accessibilityLabel="Kapat" hitSlop={16} onPress={onClose}><T weight="semi" style={styles.close}>Kapat</T></Pressable>
+      </View>
+      <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.sheetBody}>
+        {children}
+      </ScrollView>
+    </Popup>
   );
 }
 
@@ -959,33 +952,50 @@ function EditorBody({ session, onChange, onClose, onPick }) {
       next[index] = title;
       set({ lines: next, title: next[0] || '' });
     };
-    const goNext = (index) => {
-      if (!String(lines[index] || '').trim() && index === lines.length - 1) return;
-      if (index < lines.length - 1) {
-        lineRefs.current[index + 1]?.focus();
-        return;
-      }
+    const addLine = () => {
       const next = [...lines, ''];
       set({ lines: next, title: next[0] || '' });
       setTimeout(() => lineRefs.current[next.length - 1]?.focus(), 40);
     };
+    const goNext = (index) => {
+      if (index < lines.length - 1) {
+        lineRefs.current[index + 1]?.focus();
+        return;
+      }
+      addLine();
+    };
+    const dropLine = (index) => {
+      const next = lines.filter((_, item) => item !== index);
+      set({ lines: next.length ? next : [''], title: (next[0] || '') });
+    };
     return (
       <Sheet title={draft.id ? 'Alınacak' : 'Alınacak ekle'} onClose={onClose}>
-        <Field label="Ne lazım">
-          <T weight="medium" style={styles.hint}>Geç tuşu bir alt satırı açar. Her satır ayrı bir madde olur.</T>
+        <Field label="Alınacaklar">
+          <T weight="medium" style={styles.hint}>Her kutu ayrı bir madde. Süt, deterjan, ampul diye alt alta yaz.</T>
           {lines.map((line, index) => (
-            <Input
-              key={`line-${index}`}
-              ref={(node) => { lineRefs.current[index] = node; }}
-              value={line}
-              onChangeText={(title) => setLine(index, title)}
-              placeholder={index === 0 ? 'Süt' : 'Sonraki madde'}
-              returnKeyType="next"
-              blurOnSubmit={false}
-              onSubmitEditing={() => goNext(index)}
-              style={index ? styles.lineGap : null}
-            />
+            <View key={`line-${index}`} style={[styles.needRow, index ? styles.lineGap : null]}>
+              <View style={styles.needNo}><T weight="semi" style={styles.needNoText}>{index + 1}</T></View>
+              <View style={styles.flex}>
+                <Input
+                  ref={(node) => { lineRefs.current[index] = node; }}
+                  value={line}
+                  onChangeText={(title) => setLine(index, title)}
+                  placeholder={index === 0 ? 'Süt' : 'Bir sonraki madde'}
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => goNext(index)}
+                />
+              </View>
+              {lines.length > 1 ? (
+                <Pressable accessibilityRole="button" accessibilityLabel="Bu maddeyi sil" onPress={() => dropLine(index)} style={styles.needDrop}>
+                  <T weight="semi" style={styles.needDropText}>Sil</T>
+                </Pressable>
+              ) : null}
+            </View>
           ))}
+          <Pressable accessibilityRole="button" onPress={addLine} style={styles.needAdd}>
+            <T weight="semi" style={styles.needAddText}>+ Yeni madde ekle</T>
+          </Pressable>
         </Field>
         <Field label="Not">
           <Input value={draft.notes || ''} onChangeText={(notes) => set({ notes })} placeholder="Markette, iki kutu" />
@@ -1057,16 +1067,8 @@ function EditorBody({ session, onChange, onClose, onPick }) {
 }
 
 const styles = StyleSheet.create({
-  modal: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(30,26,22,0.35)' },
-  sheet: {
-    maxHeight: '88%',
-    backgroundColor: colors.paper,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 8,
-  },
-  handle: { alignSelf: 'center', width: 42, height: 4, borderRadius: 2, backgroundColor: colors.line, marginBottom: 8 },
+  handle: { alignSelf: 'center', width: 42, height: 4, borderRadius: 2, backgroundColor: colors.line, marginTop: 8, marginBottom: 8 },
+  sheetScroll: { flexGrow: 0, flexShrink: 1 },
   sheetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20 },
   sheetTitle: { fontSize: 28, color: colors.ink },
   close: { color: colors.inkSoft, fontSize: 15 },
@@ -1086,6 +1088,22 @@ const styles = StyleSheet.create({
   placeOpen: { color: colors.clayDeep, marginTop: 4 },
   hint: { color: colors.inkSoft, lineHeight: 20, marginBottom: 12 },
   lineGap: { marginTop: 8 },
+  needRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  needNo: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  needNoText: { color: colors.white, fontSize: 13 },
+  needDrop: { paddingHorizontal: 8, paddingVertical: 8 },
+  needDropText: { color: colors.clayDeep, fontSize: 14 },
+  needAdd: {
+    marginTop: 12,
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.clay,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  needAddText: { color: colors.clayDeep, fontSize: 16 },
   status: { color: colors.ink, marginBottom: 12 },
   plan: { color: colors.inkSoft, marginTop: 10 },
   weights: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },

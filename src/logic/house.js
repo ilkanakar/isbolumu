@@ -339,6 +339,23 @@ export function shareAmount(bill) {
   return `kişi başı ${whole ? each : each.toFixed(2)} TL`;
 }
 
+export function purchaseGroups(needs) {
+  const groups = {};
+  (needs || []).filter((need) => need.done).forEach((need) => {
+    const key = need.boughtAt || 'tarihsiz';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(need);
+  });
+  return Object.keys(groups)
+    .sort((a, b) => (a === 'tarihsiz' ? 1 : b === 'tarihsiz' ? -1 : b.localeCompare(a)))
+    .map((key) => ({
+      date: key,
+      items: groups[key],
+      total: groups[key].reduce((sum, item) => sum + (Number(item.price) || 0), 0),
+      priced: groups[key].filter((item) => item.price != null).length,
+    }));
+}
+
 export function dayKindLabel(kind) {
   if (kind === 'birthday') return 'Doğum günü';
   if (kind === 'anniversary') return 'Yıldönümü';

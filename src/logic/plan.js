@@ -3,6 +3,7 @@ import {
   clampDay,
   formatLong,
   iso,
+  lira,
   parseISO,
   reminderDates,
   todayISO,
@@ -14,6 +15,7 @@ import {
   memberName,
   payerFor,
   projectBill,
+  purchaseGroups,
   statusText,
   tasksOn,
 } from './house.js';
@@ -68,7 +70,8 @@ export function collectPlan(place, options = {}) {
         tasksOn(place, cursor, today).forEach((item) => {
           const ids = item.expectedIds || expectedIds(item.task, cursor) || [];
           if (personId && !ids.includes(personId)) return;
-          rows.push(row('İş', item.task.title, statusText(place, item), item.task.reminderTime, null));
+          const detail = [statusText(place, item), item.task.notes].filter(Boolean).join(' · ');
+          rows.push(row('İş', item.task.title, detail, item.task.reminderTime, null));
         });
       }
       if (parts.bills && !personId) {
@@ -76,7 +79,8 @@ export function collectPlan(place, options = {}) {
           const projected = projectBill(bill, cursor, cursor, today)[0];
           if (!projected) return;
           const payer = memberName(place, projected.payerId || payerFor(bill, 0));
-          rows.push(row('Fatura', bill.title, payer, '10:00', null));
+          const detail = [payer, bill.amount != null && bill.amount !== '' ? lira(bill.amount) : '', bill.notes].filter(Boolean).join(' · ');
+          rows.push(row('Fatura', bill.title, detail, '10:00', null));
         });
       } else if (parts.bills && personId) {
         (place.bills || []).forEach((bill) => {
@@ -84,7 +88,8 @@ export function collectPlan(place, options = {}) {
           if (!projected) return;
           const payerId = projected.payerId || payerFor(bill, 0);
           if (payerId !== personId) return;
-          rows.push(row('Fatura', bill.title, memberName(place, payerId), '10:00', null));
+          const detail = [memberName(place, payerId), bill.amount != null && bill.amount !== '' ? lira(bill.amount) : '', bill.notes].filter(Boolean).join(' · ');
+          rows.push(row('Fatura', bill.title, detail, '10:00', null));
         });
       }
       if (parts.reminders && !personId) {
@@ -110,7 +115,8 @@ export function collectPlan(place, options = {}) {
       if (parts.needs) {
         (place.needs || []).forEach((need) => {
           if (need.done || need.date !== cursor) return;
-          rows.push(row('Alınacak', need.title, need.notes || '', '18:00', null));
+          const detail = [need.notes, need.price != null ? lira(need.price) : ''].filter(Boolean).join(' · ');
+          rows.push(row('Alınacak', need.title, detail, '18:00', null));
         });
       }
       if (parts.lessons) {
@@ -121,7 +127,7 @@ export function collectPlan(place, options = {}) {
           rows.push(row(
             lesson.kind === 'sinav' ? 'Sınav' : 'Ders',
             lesson.title,
-            [lesson.room, who].filter(Boolean).join(' · '),
+            [lesson.room, who, lesson.notes].filter(Boolean).join(' · '),
             lesson.time || lesson.reminderTime || '09:00',
             lesson.endTime,
           ));
@@ -133,21 +139,27 @@ export function collectPlan(place, options = {}) {
     }
   }
 
-  const needs = (needsOnly || parts.needs)
-    ? (place?.needs || []).filter((need) => {
-      if (needsOnly) return true;
-      if (!need.date) return true;
-      return need.date >= span.from && need.date <= span.to;
-    })
+  const includeNeeds = Boolean(place) && (needsOnly || parts.needs);
+  const openNeeds = includeNeeds ? (place.needs || []).filter((need) => !need.done) : [];
+  const boughtNeeds = includeNeeds
+    ? (place.needs || []).filter((need) => need.done && need.boughtAt && need.boughtAt >= span.from && need.boughtAt <= span.to)
     : [];
+  const purchases = purchaseGroups(boughtNeeds);
+  const purchaseTotal = purchases.reduce((sum, group) => sum + group.total, 0);
+  const purchasePriced = purchases.reduce((sum, group) => sum + group.priced, 0);
+  const purchaseUnpriced = boughtNeeds.length - purchasePriced;
 
   return {
-    heading: needsOnly ? 'Alınacaklar' : span.heading,
+    heading: needsOnly ? 'Alışveriş raporu' : span.heading,
     placeName: place?.name || 'İş Bölümü',
     from: span.from,
     to: span.to,
     days: needsOnly ? [] : days,
-    needs,
+    needs: openNeeds,
+    purchases,
+    purchaseTotal,
+    purchasePriced,
+    purchaseUnpriced,
   };
 }
 
@@ -183,31 +195,47 @@ export function htmlForPlan(plan) {
       </div>`).join('');
     return `<h2>${esc(day.label)}</h2>${lines}`;
   }).join('');
-  const openNeeds = (plan.needs || []).filter((need) => !need.done);
-  const doneNeeds = (plan.needs || []).filter((need) => need.done);
-  const needLine = (need) => `<div class="${need.done ? 'need done' : 'need'}"><span class="box"></span>${esc(need.title)}${need.date ? ` <span class="meta">${esc(formatLong(need.date))}</span>` : ''}${need.notes ? ` <span class="meta">${esc(need.notes)}</span>` : ''}</div>`;
-  const needBlock = (plan.needs || []).length
-    ? `<h2>Alınacaklar</h2>${openNeeds.map(needLine).join('')}${doneNeeds.length ? `<h2>Alınanlar</h2>${doneNeeds.map(needLine).join('')}` : ''}`
+  const openLine = (need) => {
+    const extra = [need.date ? formatLong(need.date) : '', need.notes, need.price != null ? lira(need.price) : ''].filter(Boolean).join(' · ');
+    return `<div class="need"><span class="box"></span><span class="name">${esc(need.title)}</span>${extra ? `<div class="meta">${esc(extra)}</div>` : ''}</div>`;
+  };
+  const boughtLine = (need) => {
+    const price = need.price != null ? lira(need.price) : 'Fiyat yok';
+    return `<div class="need bought"><span class="box on"></span><span class="name">${esc(need.title)}</span><span class="price">${esc(price)}</span>${need.notes ? `<div class="meta">${esc(need.notes)}</div>` : ''}</div>`;
+  };
+  const purchaseBlocks = (plan.purchases || []).map((group) => `
+    <h3>${group.date === 'tarihsiz' ? 'Tarihi yazılmamış' : esc(formatLong(group.date))}</h3>
+    ${group.items.map(boughtLine).join('')}
+    <div class="meta">${group.items.length} ürün${group.priced ? ` · ${esc(lira(group.total))}` : ''}</div>`).join('');
+  const totalLine = (plan.purchases || []).length
+    ? `<div class="total"><div>Toplam · ${plan.purchasePriced ? esc(lira(plan.purchaseTotal)) : 'fiyat yazılmamış'}</div>${plan.purchaseUnpriced ? `<div class="meta">${plan.purchaseUnpriced} ürünün fiyatı yazılmamış, toplama girmiyor.</div>` : ''}</div>`
     : '';
-  const empty = !dayBlocks && !(plan.needs || []).length ? '<p class="meta">Bu aralıkta paylaşılacak kayıt yok.</p>' : '';
+  const openBlock = (plan.needs || []).length ? `<h2>Alınacaklar</h2>${plan.needs.map(openLine).join('')}` : '';
+  const boughtBlock = (plan.purchases || []).length ? `<h2>Alınanlar</h2>${purchaseBlocks}${totalLine}` : '';
+  const empty = !dayBlocks && !openBlock && !boughtBlock ? '<p class="meta">Bu aralıkta paylaşılacak kayıt yok.</p>' : '';
   return `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><style>
     body { font-family: Georgia, serif; color: #1E1A16; margin: 28px; }
     h1 { font-weight: normal; font-size: 28px; margin: 0; }
     h2 { font-weight: normal; font-size: 18px; margin: 22px 0 8px; border-bottom: 1px solid #E4D8C8; padding-bottom: 4px; }
+    h3 { font-weight: normal; font-size: 16px; margin: 14px 0 6px; }
     .sub { color: #5E534A; margin-top: 4px; }
     .kind { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #8E3B24; }
     .title { font-size: 16px; margin-top: 2px; }
     .meta { color: #5E534A; font-size: 13px; }
     .row { margin: 10px 0; }
-    .need { margin: 8px 0; font-size: 16px; }
+    .need { margin: 8px 0 10px; font-size: 16px; }
+    .name { margin-right: 8px; }
+    .price { float: right; font-size: 15px; }
     .box { display: inline-block; width: 13px; height: 13px; border: 1.5px solid #1E1A16; margin-right: 8px; vertical-align: -1px; }
-    .done { color: #8A7B6D; text-decoration: line-through; }
+    .box.on { background: #1E1A16; }
+    .total { margin-top: 12px; padding-top: 8px; border-top: 1px solid #1E1A16; font-size: 18px; }
     .foot { margin-top: 28px; color: #A89888; font-size: 12px; }
   </style></head><body>
     <h1>${esc(plan.placeName)}</h1>
     <div class="sub">${esc(plan.heading)} · ${range}</div>
     ${dayBlocks}
-    ${needBlock}
+    ${openBlock}
+    ${boughtBlock}
     ${empty}
     <div class="foot">İş Bölümü</div>
   </body></html>`;

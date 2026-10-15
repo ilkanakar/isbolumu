@@ -11,6 +11,7 @@ const labels = {
   takvim: 'Takvim',
   ev: 'İşler',
   defter: 'Defter',
+  ayarlar: 'Ayarlar',
 };
 
 function Bar({ state, navigation }) {
@@ -50,6 +51,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="takvim" options={{ title: 'Takvim' }} />
       <Tabs.Screen name="ev" options={{ title: 'İşler' }} />
       <Tabs.Screen name="defter" options={{ title: 'Defter' }} />
+      <Tabs.Screen name="ayarlar" options={{ title: 'Ayarlar' }} />
     </Tabs>
   );
 }

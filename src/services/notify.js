@@ -25,6 +25,15 @@ try {
   // Bildirim kurulamazsa defter yine açılır.
 }
 
+export async function notificationsAllowed() {
+  try {
+    const current = await Notifications.getPermissionsAsync();
+    return Boolean(current.granted);
+  } catch {
+    return false;
+  }
+}
+
 let asked = false;
 
 export async function ensurePermission(force = false) {
@@ -56,6 +65,10 @@ function triggerFor(date) {
 export async function scheduleHouse(state) {
   if (!state?.onboardingDone) return;
   try {
+    if (state.notify === false) {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      return;
+    }
     const granted = await ensurePermission(false);
     if (!granted) return;
     if (Platform.OS === 'android') {

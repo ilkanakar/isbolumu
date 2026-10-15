@@ -1,10 +1,10 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AdBanner from '../../components/AdBanner.js';
 import { useEditor } from '../../components/Editor.js';
 import NeedBoard from '../../components/NeedBoard.js';
+import PurchaseFile from '../../components/PurchaseFile.js';
 import T from '../../components/Type.js';
 import { Button, Empty } from '../../components/ui.js';
 import { addDays, formatLong, todayISO } from '../../logic/dates.js';
@@ -27,14 +27,15 @@ export default function TodayScreen() {
   const { place } = useHouse();
   const editor = useEditor();
   const [needsOpen, setNeedsOpen] = useState(false);
+  const [fileOpen, setFileOpen] = useState(false);
   const today = todayISO();
   const tomorrow = addDays(today, 1);
   if (!place) return null;
   const todayPlan = agendaFor(place, today, today);
   const tomorrowPlan = agendaFor(place, tomorrow, today);
   const homeNotes = (place.notes || []).filter((note) => note.showOnHome || note.pinned);
-  const homeNeeds = (place.needs || []).filter((need) => need.showOnHome);
-  const openNeeds = homeNeeds.filter((need) => !need.done);
+  const homeNeeds = (place.needs || []).filter((need) => need.showOnHome && !need.done);
+  const hasFile = (place.needs || []).some((need) => need.done) || (place.bills || []).some((bill) => bill.amount);
 
   const openPlan = (item) => editor.open(item.edit.type, item.edit.item);
 
@@ -52,9 +53,6 @@ export default function TodayScreen() {
               <T weight="semi" style={styles.switchText}>Yer değiştir veya yeni ekle</T>
             </Pressable>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Ayarlar" onPress={() => router.push('/ayarlar')} style={styles.gear}>
-            <T weight="semi" style={styles.gearText}>Ayarlar</T>
-          </Pressable>
         </View>
 
         <T weight="serif" style={styles.day}>{formatLong(today)}</T>
@@ -87,14 +85,21 @@ export default function TodayScreen() {
           <Pressable accessibilityRole="button" onPress={() => setNeedsOpen(true)} style={styles.box}>
             <T weight="serif" style={styles.boxTitle}>Alınacaklar</T>
             <T weight="medium" style={styles.lineMeta}>Listeyi aç, aldıklarını tikle.</T>
-            {(openNeeds.length ? openNeeds : homeNeeds).slice(0, 4).map((need) => (
+            {(homeNeeds).slice(0, 4).map((need) => (
               <View key={need.id} style={styles.line}>
-                <T weight="semi" style={styles.lineTitle}>{need.done ? `✓ ${need.title}` : need.title}</T>
+                <T weight="semi" style={styles.lineTitle}>{need.title}</T>
               </View>
             ))}
           </Pressable>
         ) : null}
-        {needsOpen ? <NeedBoard onClose={() => setNeedsOpen(false)} /> : null}
+        {hasFile ? (
+          <Pressable accessibilityRole="button" onPress={() => setFileOpen(true)} style={styles.box}>
+            <T weight="serif" style={styles.boxTitle}>Alışveriş dosyası</T>
+            <T weight="medium" style={styles.lineMeta}>Alınanlar ve ücretli işlerin tutarı burada.</T>
+          </Pressable>
+        ) : null}
+        {needsOpen ? <NeedBoard onClose={() => setNeedsOpen(false)} onOpenFile={() => { setNeedsOpen(false); setFileOpen(true); }} /> : null}
+        {fileOpen ? <PurchaseFile onClose={() => setFileOpen(false)} /> : null}
 
         <View style={styles.tomorrow}>
           <T weight="serif" style={styles.tomorrowTitle}>Yarın</T>
@@ -133,16 +138,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   switchText: { color: colors.white, fontSize: 14 },
-  gear: {
-    marginTop: 8,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  gearText: { color: colors.ink, fontSize: 13 },
   day: { fontSize: 22, color: colors.ink, marginTop: 18 },
   list: { gap: 8, marginTop: 10 },
   card: {

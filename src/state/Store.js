@@ -115,6 +115,9 @@ export function HouseProvider({ children }) {
       switchPlace(id) {
         update((prev) => ({ ...prev, activePlaceId: id }));
       },
+      setNotify(on) {
+        update((prev) => ({ ...prev, notify: Boolean(on) }));
+      },
       deletePlace(id) {
         update((prev) => {
           if (prev.places.length <= 1) return prev;
@@ -349,6 +352,8 @@ export function HouseProvider({ children }) {
             date: draft.date || '',
             showOnHome: Boolean(draft.showOnHome),
             done: Boolean(draft.done),
+            boughtAt: draft.boughtAt || '',
+            price: draft.price == null || draft.price === '' ? null : Number(draft.price),
           }),
         })));
       },
@@ -361,6 +366,8 @@ export function HouseProvider({ children }) {
             date: draft.date || '',
             showOnHome: Boolean(draft.showOnHome),
             done: Boolean(draft.done),
+            boughtAt: draft.boughtAt || '',
+            price: draft.price == null || draft.price === '' ? null : Number(draft.price),
           }))
           .filter((draft) => draft.title);
         if (!rows.length) return;
@@ -385,6 +392,30 @@ export function HouseProvider({ children }) {
       },
       deleteNeed(id) {
         update((prev) => withPlace(prev, (place) => ({ ...place, needs: (place.needs || []).filter((item) => item.id !== id) })));
+      },
+      buyNeed(id, price) {
+        const today = todayISO();
+        update((prev) => withPlace(prev, (place) => ({
+          ...place,
+          needs: (place.needs || []).map((item) => (item.id === id ? {
+            ...item,
+            done: true,
+            boughtAt: today,
+            price: price == null ? null : price,
+          } : item)),
+        })));
+      },
+      restoreNeed(id) {
+        update((prev) => withPlace(prev, (place) => ({
+          ...place,
+          needs: (place.needs || []).map((item) => (item.id === id ? { ...item, done: false, boughtAt: '', price: null } : item)),
+        })));
+      },
+      setNeedPrice(id, price) {
+        update((prev) => withPlace(prev, (place) => ({
+          ...place,
+          needs: (place.needs || []).map((item) => (item.id === id ? { ...item, price: price == null ? null : price } : item)),
+        })));
       },
       toggleNeed(id) {
         update((prev) => withPlace(prev, (place) => ({

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AdBanner from '../../components/AdBanner.js';
 import { useEditor } from '../../components/Editor.js';
 import { DayItem, LessonItem, LoanItem, NeedItem, NoteItem, ReminderItem } from '../../components/records.js';
+import PurchaseFile from '../../components/PurchaseFile.js';
 import T from '../../components/Type.js';
 import { Button, Empty, Seg } from '../../components/ui.js';
 import { nextSpecialDate } from '../../logic/dates.js';
@@ -24,12 +25,13 @@ export default function NotebookScreen() {
   const { place } = useHouse();
   const editor = useEditor();
   const [tab, setTab] = useState('liste');
+  const [fileOpen, setFileOpen] = useState(false);
   if (!place) return null;
   const openLoans = place.loans.filter((loan) => !loan.settled);
   const shutLoans = place.loans.filter((loan) => loan.settled);
   const days = [...place.days].sort((a, b) => nextSpecialDate(a).localeCompare(nextSpecialDate(b)));
   const notes = [...place.notes].sort((a, b) => Number(b.showOnHome || b.pinned) - Number(a.showOnHome || a.pinned) || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-  const needs = [...(place.needs || [])].sort((a, b) => Number(a.done) - Number(b.done));
+  const needs = (place.needs || []).filter((need) => !need.done);
   const lessons = place.lessons || [];
   const addType = { liste: 'need', ders: 'lesson', not: 'note', gun: 'day', hatir: 'reminder', emanet: 'loan' }[tab];
 
@@ -45,7 +47,12 @@ export default function NotebookScreen() {
       <Seg options={tabs} value={tab} onChange={setTab} />
 
       {tab === 'liste' ? (
-        needs.length ? needs.map((need) => <NeedItem key={need.id} need={need} />) : <Empty text="Süt, deterjan, ampul. Geç tuşu alt satırı açar." />
+        <View>
+          {needs.length ? needs.map((need) => <NeedItem key={need.id} need={need} />) : <Empty text="Süt, deterjan, ampul. Yeni madde ekle ile alt alta yaz." />}
+          <View style={styles.add}>
+            <Button label="Alışveriş dosyası" tone="quiet" onPress={() => setFileOpen(true)} />
+          </View>
+        </View>
       ) : null}
       {tab === 'ders' ? (
         lessons.length ? lessons.map((lesson) => <LessonItem key={lesson.id} lesson={lesson} />) : <Empty text="Ders gününü ve saatini yaz. Sınavı da aynı yerden ekle." />
@@ -72,6 +79,7 @@ export default function NotebookScreen() {
       <View style={styles.add}>
         <Button label="Ekle" onPress={() => editor.open(addType)} />
       </View>
+      {fileOpen ? <PurchaseFile onClose={() => setFileOpen(false)} /> : null}
     </ScrollView>
     </View>
   );

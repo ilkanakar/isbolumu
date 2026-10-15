@@ -156,5 +156,32 @@ const printed = plan.collectPlan({
 assert(printed.days.some((day) => day.rows.some((item) => item.kind === 'Ders')), 'planda ders');
 assert(printed.needs.some((need) => need.title === 'Süt'), 'planda alınacak');
 assert(plan.htmlForPlan(printed).includes('Süt'), 'pdfte süt');
+const shop = plan.collectPlan({
+  ...place,
+  tasks: [],
+  bills: [],
+  reminders: [],
+  days: [],
+  loans: [],
+  lessons: [],
+  needs: [
+    { title: 'Süt', done: false, notes: 'iki kutu', date: '' },
+    { title: 'Ekmek', done: true, boughtAt: today, price: 15, notes: 'fırın' },
+    { title: 'Peynir', done: true, boughtAt: '2026-09-01', price: 90, notes: '' },
+  ],
+}, { mode: 'week', today, needsOnly: true });
+assert(shop.needs.some((need) => need.title === 'Süt'), 'raporda alınacak');
+assert(shop.purchases.some((group) => group.items.some((need) => need.title === 'Ekmek')), 'bu hafta alınan');
+assert(!shop.purchases.some((group) => group.items.some((need) => need.title === 'Peynir')), 'eski ay rapora girmez');
+assert(shop.purchaseTotal === 15, 'haftanın toplamı');
+const report = plan.htmlForPlan(shop);
+assert(report.includes('Ekmek') && report.includes('Toplam') && report.includes('fırın'), 'pdfte ürün ve toplam');
+const groups = house.purchaseGroups([
+  { title: 'Süt', done: true, boughtAt: today, price: 40 },
+  { title: 'Ekmek', done: true, boughtAt: today, price: 15 },
+  { title: 'Deterjan', done: false, price: 80 },
+]);
+assert(groups.length === 1 && groups[0].items.length === 2, 'aynı günün alışverişi');
+assert(groups[0].total === 55, 'günün tutarı');
 
 console.log('İş Bölümü mantığı tamam');

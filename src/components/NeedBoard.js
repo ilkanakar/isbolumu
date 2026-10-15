@@ -1,71 +1,59 @@
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { formatShort } from '../logic/dates.js';
 import { sharePlanPdf } from '../services/sharePlan.js';
 import { useHouse } from '../state/Store.js';
 import { colors } from '../theme.js';
 import { useEditor } from './Editor.js';
+import { BuyForm } from './PurchaseFile.js';
+import Popup from './Popup.js';
 import T from './Type.js';
-import { Button, feel } from './ui.js';
+import { Button } from './ui.js';
 
-export default function NeedBoard({ onClose }) {
-  const { place, toggleNeed } = useHouse();
+export default function NeedBoard({ onClose, onOpenFile }) {
+  const { place } = useHouse();
   const editor = useEditor();
-  const needs = [...(place?.needs || [])].sort((a, b) => Number(a.done) - Number(b.done));
-  const open = needs.filter((need) => !need.done);
-  const done = needs.filter((need) => need.done);
-
-  const tick = (id) => {
-    feel('done');
-    toggleNeed(id);
-  };
-
-  const line = (need) => (
-    <Pressable key={need.id} accessibilityRole="checkbox" accessibilityState={{ checked: need.done }} onPress={() => tick(need.id)} style={styles.line}>
-      <View style={[styles.box, need.done && styles.boxOn]}>
-        {need.done ? <T weight="bold" style={styles.tick}>✓</T> : null}
-      </View>
-      <View style={styles.text}>
-        <T weight="semi" style={[styles.title, need.done && styles.done]}>{need.title}</T>
-        {[need.date ? formatShort(need.date) : '', need.notes].filter(Boolean).join(' · ') ? (
-          <T weight="medium" style={styles.meta}>{[need.date ? formatShort(need.date) : '', need.notes].filter(Boolean).join(' · ')}</T>
-        ) : null}
-      </View>
-    </Pressable>
-  );
+  const [buying, setBuying] = useState(null);
+  const open = (place?.needs || []).filter((need) => !need.done);
+  const buyingNeed = open.find((need) => need.id === buying) || null;
 
   return (
-    <Modal animationType="slide" transparent visible onRequestClose={onClose}>
-      <View style={styles.modal}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={styles.sheet}>
-          <ScrollView contentContainerStyle={styles.body}>
-            <T weight="display" style={styles.head}>Alınacaklar</T>
-            <T weight="medium" style={styles.lead}>Tiklenen alındı sayılır. Tik kalkınca yine alınacaklarda durur.</T>
-            {open.length ? open.map(line) : <T weight="medium" style={styles.empty}>Alınacak bir şey kalmadı.</T>}
-            {done.length ? <T weight="serif" style={styles.section}>Alınanlar</T> : null}
-            {done.map(line)}
-            <View style={styles.actions}>
-              <Button label="Satır ekle" onPress={() => { onClose(); editor.open('need'); }} />
-              <View style={styles.gap} />
-              <Button
-                label="Listeyi PDF paylaş"
-                tone="quiet"
-                onPress={() => sharePlanPdf(place, { needsOnly: true, mode: 'day' }).catch(() => {})}
-              />
+    <Popup onClose={onClose}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
+        <T weight="display" style={styles.head}>Alınacaklar</T>
+        <T weight="medium" style={styles.lead}>Kutuya basınca alındı olur ve alışveriş dosyasına geçer. Bu liste yalnız alınacakları gösterir.</T>
+        {buyingNeed ? <BuyForm need={buyingNeed} onDone={() => setBuying(null)} /> : null}
+        {open.length ? open.map((need) => (
+          <Pressable key={need.id} accessibilityRole="checkbox" onPress={() => setBuying(need.id)} style={styles.line}>
+            <View style={styles.box} />
+            <View style={styles.text}>
+              <T weight="semi" style={styles.title}>{need.title}</T>
+              {[need.date ? formatShort(need.date) : '', need.notes].filter(Boolean).join(' · ') ? (
+                <T weight="medium" style={styles.meta}>{[need.date ? formatShort(need.date) : '', need.notes].filter(Boolean).join(' · ')}</T>
+              ) : null}
             </View>
-            <Pressable onPress={onClose} style={styles.close}><T weight="semi" style={styles.closeText}>Kapat</T></Pressable>
-          </ScrollView>
+          </Pressable>
+        )) : <T weight="medium" style={styles.empty}>Alınacak bir şey kalmadı.</T>}
+        <View style={styles.actions}>
+          <Button label="Yeni alınacak ekle" onPress={() => { onClose(); editor.open('need'); }} />
+          <View style={styles.gap} />
+          <Button label="Alışveriş dosyası" tone="quiet" onPress={onOpenFile} />
+          <View style={styles.gap} />
+              <Button
+                label="Raporu PDF paylaş"
+                tone="quiet"
+                onPress={() => sharePlanPdf(place, { needsOnly: true, mode: 'week' }).catch(() => {})}
+              />
         </View>
-      </View>
-    </Modal>
+        <Pressable accessibilityRole="button" accessibilityLabel="Kapat" hitSlop={16} onPress={onClose} style={styles.close}><T weight="semi" style={styles.closeText}>Kapat</T></Pressable>
+      </ScrollView>
+    </Popup>
   );
 }
 
 const styles = StyleSheet.create({
-  modal: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(30,26,22,0.35)' },
-  sheet: { maxHeight: '88%', backgroundColor: colors.paper, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   body: { padding: 20, paddingBottom: 36 },
+  scroll: { flexGrow: 0, flexShrink: 1 },
   head: { fontSize: 32, color: colors.ink },
   lead: { color: colors.inkSoft, marginTop: 4, marginBottom: 14, lineHeight: 20 },
   line: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.line },

@@ -1,7 +1,11 @@
+import { useState } from 'react';
+import { View } from 'react-native';
 import { dayKindLabel, memberName, openBill, payerFor, repeatLabel, shareAmount, turningAge } from '../logic/house.js';
 import { formatShort, lira, nextSpecialDate, relative, weekdayName } from '../logic/dates.js';
 import { billCategories } from '../theme.js';
 import { useEditor } from './Editor.js';
+import { BuyForm } from './PurchaseFile.js';
+import Popup from './Popup.js';
 import { Item } from './ui.js';
 import { useHouse } from '../state/Store.js';
 
@@ -93,18 +97,27 @@ export function NoteItem({ note }) {
 }
 
 export function NeedItem({ need }) {
-  const { toggleNeed } = useHouse();
   const editor = useEditor();
+  const [buying, setBuying] = useState(false);
   return (
-    <Item
-      tone="shop"
-      title={need.title}
-      meta={[need.done ? 'Alındı' : 'Açık', need.date ? formatShort(need.date) : '', need.showOnHome ? 'Ana sayfada' : ''].filter(Boolean).join(' · ')}
-      extra={need.notes}
-      action={need.done ? 'Geri al' : 'Alındı'}
-      onAction={() => toggleNeed(need.id)}
-      onPress={() => editor.open('need', need)}
-    />
+    <View>
+      <Item
+        tone="shop"
+        title={need.title}
+        meta={[need.date ? formatShort(need.date) : 'Günü yok', need.showOnHome ? 'Ana sayfada' : ''].filter(Boolean).join(' · ')}
+        extra={need.notes}
+        action="Alındı"
+        onAction={() => setBuying(true)}
+        onPress={() => editor.open('need', need)}
+      />
+      {buying ? (
+        <Popup onClose={() => setBuying(false)}>
+          <View style={{ padding: 16 }}>
+            <BuyForm need={need} onDone={() => setBuying(false)} />
+          </View>
+        </Popup>
+      ) : null}
+    </View>
   );
 }
 

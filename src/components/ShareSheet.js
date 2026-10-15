@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { addDays, formatLong, todayISO } from '../logic/dates.js';
 import { exportPlanToCalendar, sharePlanPdf } from '../services/sharePlan.js';
 import { colors } from '../theme.js';
+import Popup from './Popup.js';
 import T from './Type.js';
 import { Button, Chips, Field } from './ui.js';
 
@@ -66,11 +67,8 @@ export default function ShareSheet({ place, onClose }) {
   };
 
   return (
-    <Modal animationType="slide" transparent visible onRequestClose={onClose}>
-      <View style={styles.modal}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={styles.sheet}>
-          <ScrollView contentContainerStyle={styles.body}>
+    <Popup onClose={onClose}>
+      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
             <T weight="display" style={styles.title}>İşleri paylaş</T>
             <T weight="medium" style={styles.lead}>Seçtiğin günler PDF olur. Çıktı alıp eve asabilirsin. Aynı seçim telefon takvimine de yazılır.</T>
             <Field label="Aralık">
@@ -113,22 +111,18 @@ export default function ShareSheet({ place, onClose }) {
             {message ? <T weight="medium" style={styles.message}>{message}</T> : null}
             <Button label={busy ? 'Hazırlanıyor' : 'PDF paylaş'} disabled={busy} onPress={() => run(() => sharePlanPdf(place, options()))} />
             <View style={styles.gap} />
-            <Button label="Sadece alınacaklar" tone="quiet" disabled={busy} onPress={() => run(() => sharePlanPdf(place, { ...options(), needsOnly: true, mode: 'day' }))} />
+            <Button label="Alışveriş raporu" tone="quiet" disabled={busy} onPress={() => run(() => sharePlanPdf(place, { ...options(), needsOnly: true }))} />
             <View style={styles.gap} />
             <Button label="Telefon takvimine aktar" tone="quiet" disabled={busy} onPress={() => run(() => exportPlanToCalendar(place, options()))} />
-            <Pressable onPress={onClose} style={styles.close}><T weight="semi" style={styles.closeText}>Kapat</T></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Kapat" hitSlop={16} onPress={onClose} style={styles.close}><T weight="semi" style={styles.closeText}>Kapat</T></Pressable>
           </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    </Popup>
   );
 }
 
 const styles = StyleSheet.create({
-  modal: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(30,26,22,0.35)' },
-  sheet: { maxHeight: '88%', backgroundColor: colors.paper, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   body: { padding: 20, paddingBottom: 36 },
+  scroll: { flexGrow: 0, flexShrink: 1 },
   title: { fontSize: 32, color: colors.ink },
   lead: { color: colors.inkSoft, marginTop: 6, marginBottom: 8, lineHeight: 20 },
   step: { marginBottom: 10 },
