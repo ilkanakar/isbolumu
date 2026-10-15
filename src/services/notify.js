@@ -60,7 +60,7 @@ export async function scheduleHouse(state) {
     if (!granted) return;
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('sacak', {
-        name: 'Yer Arkadaşım',
+        name: 'İş Bölümü',
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     }
@@ -104,7 +104,7 @@ export async function scheduleHouse(state) {
           queued.push({
             date: atTime(date, reminder.time || '09:00'),
             title: `${prefix}${reminder.title}`,
-            body: reminder.notes || 'Yer Arkadaşım hatırlatması',
+            body: reminder.notes || 'İş Bölümü hatırlatması',
           });
         });
       });

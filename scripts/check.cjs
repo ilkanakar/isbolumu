@@ -128,4 +128,4 @@ const agenda = house.agendaFor({ ...place, tasks: [dishes], bills: [], reminders
 assert(agenda.some((item) => item.edit.type === 'task'), 'yarın iş düzeni');
 assert(agenda.some((item) => item.kind === 'shop'), 'yarın alınacak');
 
-console.log('Yer Arkadaşım mantığı tamam');
+console.log('İş Bölümü mantığı tamam');

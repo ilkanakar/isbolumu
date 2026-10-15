@@ -33,7 +33,7 @@ export default function Onboarding() {
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
         <AdBanner />
         <Mark size={64} />
-        <T weight="display" style={styles.title}>Yer Arkadaşım</T>
+        <T weight="display" style={styles.title}>İş Bölümü</T>
         <T weight="medium" style={styles.lead}>Evini ya da iş yerini kur. İşleri sonra takvimden eklersin.</T>
 
         <View style={styles.kinds}>
