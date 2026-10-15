@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Sergen",
+    "name": "Yer Arkadaşım",
     "slug": "sacak",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "scheme": "sacak",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ilkanakar.sergen",
+      "bundleIdentifier": "com.ilkanakar.yerarkadasim",
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -18,7 +18,7 @@
       }
     },
     "android": {
-      "package": "com.ilkanakar.sergen",
+      "package": "com.ilkanakar.yerarkadasim",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

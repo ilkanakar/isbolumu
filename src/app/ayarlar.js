@@ -33,7 +33,7 @@ export default function SettingsScreen() {
   const loadBackup = () => {
     try {
       const parsed = JSON.parse(backup.trim());
-      if (parsed.app && parsed.app !== 'sacak' && parsed.app !== 'sergen') throw new Error('Bu yedek bu uygulamaya ait değil.');
+      if (parsed.app && !['sacak', 'sergen', 'sirayla', 'yerarkadasim'].includes(parsed.app)) throw new Error('Bu yedek bu uygulamaya ait değil.');
       const next = parsed.state || parsed;
       if (!Array.isArray(next.places) || !next.places.length) throw new Error('Yedekte yer yok.');
       house.importState(next);
@@ -93,7 +93,7 @@ export default function SettingsScreen() {
         <T weight="medium" style={styles.copy}>
           Hesap yok. Ev, iş, not ve alınacaklar bu telefondan dışarı gitmez. Reklam için Google AdMob cihaz reklam kimliği ve reklam ölçümü kullanabilir. Kişisel veri satılmaz. Kayıtları silmek için aşağıdaki sıfırlamayı kullanırsın.
         </T>
-        <Button label="Gizlilik metnini aç" tone="quiet" onPress={() => Linking.openURL('https://ilkanakar.github.io/sergen/privacy.html')} />
+        <Button label="Gizlilik metnini aç" tone="quiet" onPress={() => Linking.openURL('https://ilkanakar.github.io/yerarkadasim/privacy.html')} />
       </View>
 
       <View style={styles.block}>
