@@ -10,6 +10,7 @@ import {
   openBill,
   payerFor,
   prepareBill,
+  prepareLesson,
   prepareTask,
 } from '../logic/house.js';
 import { scheduleHouse } from '../services/notify.js';
@@ -349,6 +350,37 @@ export function HouseProvider({ children }) {
             showOnHome: Boolean(draft.showOnHome),
             done: Boolean(draft.done),
           }),
+        })));
+      },
+      saveNeeds(drafts) {
+        const rows = (drafts || [])
+          .map((draft) => ({
+            id: draft.id || uid(),
+            title: (draft.title || '').trim(),
+            notes: (draft.notes || '').trim(),
+            date: draft.date || '',
+            showOnHome: Boolean(draft.showOnHome),
+            done: Boolean(draft.done),
+          }))
+          .filter((draft) => draft.title);
+        if (!rows.length) return;
+        update((prev) => withPlace(prev, (place) => ({
+          ...place,
+          needs: rows.reduce((list, row) => upsert(list, row), place.needs || []),
+        })));
+      },
+      saveLesson(draft) {
+        const lesson = prepareLesson({ ...draft, id: draft.id || uid() });
+        if (!lesson.title) return;
+        update((prev) => withPlace(prev, (place) => ({
+          ...place,
+          lessons: upsert(place.lessons || [], lesson),
+        })));
+      },
+      deleteLesson(id) {
+        update((prev) => withPlace(prev, (place) => ({
+          ...place,
+          lessons: (place.lessons || []).filter((item) => item.id !== id),
         })));
       },
       deleteNeed(id) {

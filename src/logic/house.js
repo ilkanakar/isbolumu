@@ -72,6 +72,7 @@ export function createPlace({ name, kind, myName, others }) {
     loans: [],
     notes: [],
     needs: [],
+    lessons: [],
   };
 }
 
@@ -365,6 +366,7 @@ export function monthMarks(place, year, month, today = todayISO()) {
   let cursor = start;
   while (cursor <= end) {
     if ((place.tasks || []).some((task) => expectedIds(task, cursor))) add(cursor, 'chore');
+    if ((place.lessons || []).some((lesson) => lessonOn(lesson, cursor))) add(cursor, 'class');
     cursor = addDays(cursor, 1);
   }
   (place.bills || []).forEach((bill) => {
@@ -383,6 +385,33 @@ export function monthMarks(place, year, month, today = todayISO()) {
     if (!need.done) add(need.date, 'shop');
   });
   return marks;
+}
+
+export function lessonOn(lesson, date) {
+  if (!lesson || !date) return false;
+  if (lesson.kind === 'sinav') return lesson.onceDate === date;
+  const days = (lesson.weekdays || []).map(Number);
+  if (!days.length) return false;
+  if (lesson.startDate && date < lesson.startDate) return false;
+  return days.includes(weekdayOf(date));
+}
+
+export function prepareLesson(draft) {
+  const kind = draft.kind === 'sinav' ? 'sinav' : 'ders';
+  return {
+    id: draft.id,
+    title: String(draft.title || '').trim(),
+    kind,
+    memberId: draft.memberId || null,
+    weekdays: kind === 'ders' ? [...new Set((draft.weekdays || []).map(Number))] : [],
+    onceDate: kind === 'sinav' ? (draft.onceDate || null) : null,
+    startDate: kind === 'ders' ? (draft.startDate || todayISO()) : null,
+    time: clock(draft.time) || '09:00',
+    endTime: clock(draft.endTime),
+    room: String(draft.room || '').trim(),
+    notes: String(draft.notes || '').trim(),
+    reminderTime: draft.reminderTime ? clock(draft.reminderTime) : null,
+  };
 }
 
 export function agendaFor(place, date, today = todayISO()) {
@@ -449,6 +478,17 @@ export function agendaFor(place, date, today = todayISO()) {
       title: need.title,
       meta: need.notes || 'Alınacak',
       edit: { type: 'need', item: need },
+    });
+  });
+  (place.lessons || []).forEach((lesson) => {
+    if (!lessonOn(lesson, date)) return;
+    const who = lesson.memberId ? memberName(place, lesson.memberId) : '';
+    items.push({
+      key: `lesson-${lesson.id}-${date}`,
+      kind: 'class',
+      title: lesson.title,
+      meta: [lesson.kind === 'sinav' ? 'Sınav' : 'Ders', lesson.time, lesson.room, who].filter(Boolean).join(' · '),
+      edit: { type: 'lesson', item: lesson },
     });
   });
   return items;

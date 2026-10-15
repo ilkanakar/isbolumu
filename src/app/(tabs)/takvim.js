@@ -27,6 +27,7 @@ function Pip({ kind }) {
   if (kind === 'day') return <View style={[styles.pipDiamond, { backgroundColor: tones.day }]} />;
   if (kind === 'loan') return <View style={[styles.pipDash, { backgroundColor: tones.loan }]} />;
   if (kind === 'shop') return <View style={styles.pipTri} />;
+  if (kind === 'class') return <View style={styles.pipClass} />;
   return <View style={[styles.pipDot, { backgroundColor: tones.chore }]} />;
 }
 
@@ -92,7 +93,7 @@ export default function CalendarScreen() {
       </View>
 
       <View style={styles.legend}>
-        {[['chore', 'İş'], ['bill', 'Fatura'], ['reminder', 'Hatırlatma'], ['day', 'Gün'], ['loan', 'Emanet'], ['shop', 'Alınacak']].map(([kind, label]) => (
+        {[['chore', 'İş'], ['bill', 'Fatura'], ['reminder', 'Hatırlatma'], ['day', 'Gün'], ['loan', 'Emanet'], ['shop', 'Alınacak'], ['class', 'Ders']].map(([kind, label]) => (
           <View key={kind} style={styles.legendItem}>
             <Pip kind={kind} />
             <T weight="medium" style={styles.legendText}>{label}</T>
@@ -152,6 +153,7 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderBottomColor: '#0F766E',
   },
+  pipClass: { width: 12, height: 5, borderRadius: 2, backgroundColor: '#4F46E5' },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8, paddingHorizontal: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendText: { color: colors.inkSoft, fontSize: 12 },

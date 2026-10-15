@@ -9,7 +9,7 @@ import {
   reminderDates,
   todayISO,
 } from '../logic/dates.js';
-import { memberName, openBill, payerFor, expectedIds } from '../logic/house.js';
+import { expectedIds, lessonOn, memberName, openBill, payerFor } from '../logic/house.js';
 
 try {
   Notifications.setNotificationHandler({
@@ -59,9 +59,12 @@ export async function scheduleHouse(state) {
     const granted = await ensurePermission(false);
     if (!granted) return;
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('sacak', {
+      await Notifications.setNotificationChannelAsync('isbolumu', {
         name: 'İş Bölümü',
-        importance: Notifications.AndroidImportance.DEFAULT,
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+        enableVibrate: true,
+        vibrationPattern: [0, 280, 120, 280],
       });
     }
     await Notifications.cancelAllScheduledNotificationsAsync();
@@ -128,6 +131,32 @@ export async function scheduleHouse(state) {
           body: loan.direction === 'lent' ? `${loan.person} kişisindeki eşyanın günü geldi.` : `${loan.person} kişisine geri verme günü.`,
         });
       });
+
+      (place.needs || []).forEach((need) => {
+        if (need.done || !need.date) return;
+        if (need.date < today || dayDistance(need.date, today) > 14) return;
+        queued.push({
+          date: atTime(need.date, '18:00'),
+          title: `${prefix}${need.title}`,
+          body: 'Alınacaklar listesinde duruyor.',
+        });
+      });
+
+      (place.lessons || []).forEach((lesson) => {
+        if (!lesson.reminderTime) return;
+        let cursor = today;
+        for (let i = 0; i < 14; i += 1) {
+          if (lessonOn(lesson, cursor)) {
+            const who = lesson.memberId ? memberName(place, lesson.memberId) : '';
+            queued.push({
+              date: atTime(cursor, lesson.reminderTime),
+              title: `${prefix}${lesson.title}`,
+              body: [lesson.kind === 'sinav' ? 'Sınav' : 'Ders', lesson.time, lesson.room, who].filter(Boolean).join(' · '),
+            });
+          }
+          cursor = addDays(cursor, 1);
+        }
+      });
     });
 
     const upcoming = queued
@@ -137,7 +166,13 @@ export async function scheduleHouse(state) {
 
     for (const item of upcoming) {
       await Notifications.scheduleNotificationAsync({
-        content: { title: item.title, body: item.body, sound: true },
+        content: {
+          title: item.title,
+          body: item.body,
+          sound: 'default',
+          channelId: 'isbolumu',
+          vibrate: [0, 280, 120, 280],
+        },
         trigger: triggerFor(item.date),
       });
     }

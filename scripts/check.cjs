@@ -128,4 +128,33 @@ const agenda = house.agendaFor({ ...place, tasks: [dishes], bills: [], reminders
 assert(agenda.some((item) => item.edit.type === 'task'), 'yarın iş düzeni');
 assert(agenda.some((item) => item.kind === 'shop'), 'yarın alınacak');
 
+const math = house.prepareLesson({
+  title: 'Matematik',
+  kind: 'ders',
+  memberId: me.id,
+  weekdays: [4],
+  startDate: today,
+  time: '09:00',
+  endTime: '10:30',
+  reminderTime: '08:45',
+});
+assert(house.lessonOn(math, today), 'perşembe ders var');
+assert(!house.lessonOn(math, '2026-10-16'), 'cuma ders yok');
+const exam = house.prepareLesson({ title: 'Vize', kind: 'sinav', onceDate: '2026-10-20', time: '13:00', memberId: me.id });
+assert(house.lessonOn(exam, '2026-10-20'), 'sınav günü');
+const plan = load('src/logic/plan.js');
+const printed = plan.collectPlan({
+  ...place,
+  tasks: [dishes],
+  bills: [],
+  reminders: [],
+  days: [],
+  loans: [],
+  needs: [{ id: 's', title: 'Süt', date: '', done: false, notes: '' }],
+  lessons: [math],
+}, { mode: 'day', today, parts: { tasks: true, lessons: true, needs: true, bills: false, reminders: false, days: false, loans: false } });
+assert(printed.days.some((day) => day.rows.some((item) => item.kind === 'Ders')), 'planda ders');
+assert(printed.needs.some((need) => need.title === 'Süt'), 'planda alınacak');
+assert(plan.htmlForPlan(printed).includes('Süt'), 'pdfte süt');
+
 console.log('İş Bölümü mantığı tamam');

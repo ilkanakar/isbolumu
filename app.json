@@ -14,7 +14,10 @@
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSUserNotificationsUsageDescription": "Fatura, ev işi, emanet ve özel günlerden önce haber vermek için."
+        "NSUserNotificationsUsageDescription": "Fatura, ev işi, ders, sınav, emanet ve özel günlerden önce sesli ve titreşimli haber vermek için.",
+        "NSCalendarsUsageDescription": "Seçtiğin iş, ders ve günleri telefon takvimine yazmak için.",
+        "NSCalendarsFullAccessUsageDescription": "Seçtiğin iş, ders ve günleri telefon takvimine yazmak için.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "Seçtiğin iş, ders ve günleri telefon takvimine yazmak için."
       }
     },
     "android": {
@@ -52,6 +55,13 @@
           "androidAppId": "ca-app-pub-3706056819475760~4227241305",
           "iosAppId": "ca-app-pub-3706056819475760~7277085631",
           "delayAppMeasurementInit": true
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Seçtiğin iş, ders ve günleri telefon takvimine yazmak için."
         }
       ]
     ]

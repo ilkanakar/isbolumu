@@ -107,3 +107,19 @@ export function NeedItem({ need }) {
     />
   );
 }
+
+export function LessonItem({ lesson }) {
+  const { place } = useHouse();
+  const editor = useEditor();
+  const days = (lesson.weekdays || []).map((day) => weekdayName(day, true)).join(' ');
+  const who = lesson.memberId ? memberName(place, lesson.memberId) : '';
+  return (
+    <Item
+      tone="class"
+      title={lesson.title}
+      meta={[lesson.kind === 'sinav' ? 'Sınav' : days, lesson.time, lesson.room, who].filter(Boolean).join(' · ')}
+      extra={lesson.notes}
+      onPress={() => editor.open('lesson', lesson)}
+    />
+  );
+}

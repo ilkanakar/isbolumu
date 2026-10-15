@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AdBanner from '../../components/AdBanner.js';
 import { useEditor } from '../../components/Editor.js';
-import { DayItem, LoanItem, NeedItem, NoteItem, ReminderItem } from '../../components/records.js';
+import { DayItem, LessonItem, LoanItem, NeedItem, NoteItem, ReminderItem } from '../../components/records.js';
 import T from '../../components/Type.js';
 import { Button, Empty, Seg } from '../../components/ui.js';
 import { nextSpecialDate } from '../../logic/dates.js';
@@ -12,8 +12,9 @@ import { colors } from '../../theme.js';
 
 const tabs = [
   { id: 'liste', label: 'Liste' },
+  { id: 'ders', label: 'Ders' },
   { id: 'not', label: 'Not' },
-  { id: 'gun', label: 'Günler' },
+  { id: 'gun', label: 'Gün' },
   { id: 'hatir', label: 'Hatır' },
   { id: 'emanet', label: 'Emanet' },
 ];
@@ -29,7 +30,8 @@ export default function NotebookScreen() {
   const days = [...place.days].sort((a, b) => nextSpecialDate(a).localeCompare(nextSpecialDate(b)));
   const notes = [...place.notes].sort((a, b) => Number(b.showOnHome || b.pinned) - Number(a.showOnHome || a.pinned) || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   const needs = [...(place.needs || [])].sort((a, b) => Number(a.done) - Number(b.done));
-  const addType = { liste: 'need', not: 'note', gun: 'day', hatir: 'reminder', emanet: 'loan' }[tab];
+  const lessons = place.lessons || [];
+  const addType = { liste: 'need', ders: 'lesson', not: 'note', gun: 'day', hatir: 'reminder', emanet: 'loan' }[tab];
 
   return (
     <View style={styles.fill}>
@@ -39,11 +41,14 @@ export default function NotebookScreen() {
       <ScrollView contentContainerStyle={styles.content}>
       <T weight="semi" style={styles.kicker}>Defter</T>
       <T weight="display" style={styles.title}>Kayıtlar</T>
-      <T weight="medium" style={styles.lead}>Alınacaklar, Wi-Fi notu, özel gün ve emanet.</T>
+      <T weight="medium" style={styles.lead}>Alınacaklar, ders, not, özel gün ve emanet.</T>
       <Seg options={tabs} value={tab} onChange={setTab} />
 
       {tab === 'liste' ? (
-        needs.length ? needs.map((need) => <NeedItem key={need.id} need={need} />) : <Empty text="Süt, deterjan, ampul. Gününü de yazabilirsin." />
+        needs.length ? needs.map((need) => <NeedItem key={need.id} need={need} />) : <Empty text="Süt, deterjan, ampul. Geç tuşu alt satırı açar." />
+      ) : null}
+      {tab === 'ders' ? (
+        lessons.length ? lessons.map((lesson) => <LessonItem key={lesson.id} lesson={lesson} />) : <Empty text="Ders gününü ve saatini yaz. Sınavı da aynı yerden ekle." />
       ) : null}
       {tab === 'emanet' ? (
         <View>

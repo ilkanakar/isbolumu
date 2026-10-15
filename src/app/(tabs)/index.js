@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AdBanner from '../../components/AdBanner.js';
 import { useEditor } from '../../components/Editor.js';
+import NeedBoard from '../../components/NeedBoard.js';
 import T from '../../components/Type.js';
 import { Button, Empty } from '../../components/ui.js';
 import { addDays, formatLong, todayISO } from '../../logic/dates.js';
@@ -17,19 +19,22 @@ const kindName = {
   day: 'Gün',
   loan: 'Emanet',
   shop: 'Alınacak',
+  class: 'Ders',
 };
 
 export default function TodayScreen() {
   const insets = useSafeAreaInsets();
-  const { place, toggleNeed } = useHouse();
+  const { place } = useHouse();
   const editor = useEditor();
+  const [needsOpen, setNeedsOpen] = useState(false);
   const today = todayISO();
   const tomorrow = addDays(today, 1);
   if (!place) return null;
   const todayPlan = agendaFor(place, today, today);
   const tomorrowPlan = agendaFor(place, tomorrow, today);
   const homeNotes = (place.notes || []).filter((note) => note.showOnHome || note.pinned);
-  const homeNeeds = (place.needs || []).filter((need) => !need.done && need.showOnHome);
+  const homeNeeds = (place.needs || []).filter((need) => need.showOnHome);
+  const openNeeds = homeNeeds.filter((need) => !need.done);
 
   const openPlan = (item) => editor.open(item.edit.type, item.edit.item);
 
@@ -79,21 +84,17 @@ export default function TodayScreen() {
         ) : null}
 
         {homeNeeds.length ? (
-          <View style={styles.box}>
+          <Pressable accessibilityRole="button" onPress={() => setNeedsOpen(true)} style={styles.box}>
             <T weight="serif" style={styles.boxTitle}>Alınacaklar</T>
-            {homeNeeds.map((need) => (
-              <Pressable key={need.id} onPress={() => editor.open('need', need)} style={styles.line}>
-                <View style={styles.lineRow}>
-                  <View style={styles.cardText}>
-                    <T weight="semi" style={styles.lineTitle}>{need.title}</T>
-                    <T weight="medium" style={styles.lineMeta}>{[need.date ? need.date : '', need.notes].filter(Boolean).join(' · ')}</T>
-                  </View>
-                  <Pressable onPress={() => toggleNeed(need.id)}><T weight="semi" style={styles.mark}>Alındı</T></Pressable>
-                </View>
-              </Pressable>
+            <T weight="medium" style={styles.lineMeta}>Listeyi aç, aldıklarını tikle.</T>
+            {(openNeeds.length ? openNeeds : homeNeeds).slice(0, 4).map((need) => (
+              <View key={need.id} style={styles.line}>
+                <T weight="semi" style={styles.lineTitle}>{need.done ? `✓ ${need.title}` : need.title}</T>
+              </View>
             ))}
-          </View>
+          </Pressable>
         ) : null}
+        {needsOpen ? <NeedBoard onClose={() => setNeedsOpen(false)} /> : null}
 
         <View style={styles.tomorrow}>
           <T weight="serif" style={styles.tomorrowTitle}>Yarın</T>

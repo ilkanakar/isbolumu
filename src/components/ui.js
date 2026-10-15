@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { forwardRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { colors, fonts, tones } from '../theme.js';
 import T from './Type.js';
@@ -42,15 +43,16 @@ export function Field({ label, children }) {
   );
 }
 
-export function Input({ style, ...props }) {
+export const Input = forwardRef(function Input({ style, ...props }, ref) {
   return (
     <TextInput
+      ref={ref}
       placeholderTextColor={colors.faint}
       {...props}
       style={[styles.input, style]}
     />
   );
-}
+});
 
 export function Chips({ options, value, onChange, multiple = false }) {
   const selected = multiple ? value : [value];

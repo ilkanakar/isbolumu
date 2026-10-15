@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,6 +15,7 @@ import {
   parseISO,
   todayISO,
   weekdayName,
+  weekdayOf,
 } from '../logic/dates.js';
 import { activePlace, emptyWeek, kindLabel, memberName, ruleLine, statusText, tasksOn } from '../logic/house.js';
 import { useHouse } from '../state/Store.js';
@@ -266,7 +267,23 @@ function blankFor(type, place, seed = {}) {
   const parsed = parseISO(date);
   if (type === 'task') return taskDraft(null, place, seed);
   if (type === 'need') {
-    return { id: null, title: '', notes: '', date: seed.date || '', showOnHome: true };
+    return { id: null, title: '', lines: [''], notes: '', date: seed.date || '', showOnHome: true };
+  }
+  if (type === 'lesson') {
+    return {
+      id: null,
+      title: '',
+      kind: 'ders',
+      memberId: me,
+      weekdays: [weekdayOf(seed.date || today)],
+      onceDate: seed.date || today,
+      startDate: seed.date || today,
+      time: '09:00',
+      endTime: '10:00',
+      room: '',
+      notes: '',
+      reminderTime: '09:00',
+    };
   }
   if (type === 'bill') {
     return {
@@ -377,6 +394,7 @@ function EditorBody({ session, onChange, onClose, onPick }) {
   const { type, draft } = session;
   const [error, setError] = useState('');
   const [amountText, setAmountText] = useState(draft.amount != null ? String(draft.amount) : '');
+  const lineRefs = useRef([]);
 
   const set = (patch) => onChange({ ...draft, ...patch });
 
@@ -392,6 +410,7 @@ function EditorBody({ session, onChange, onClose, onPick }) {
     const rows = [
       ['task', 'İş'],
       ['need', 'Alınacak'],
+      ['lesson', 'Ders'],
       ['bill', 'Fatura'],
       ['reminder', 'Hatırlatma'],
       ['day', 'Özel gün'],
@@ -863,12 +882,110 @@ function EditorBody({ session, onChange, onClose, onPick }) {
     );
   }
 
+  if (type === 'lesson') {
+    const kind = draft.kind === 'sinav' ? 'sinav' : 'ders';
+    const weekdays = draft.weekdays || [];
+    return (
+      <Sheet title={draft.id ? 'Dersi düzenle' : 'Ders veya sınav'} onClose={onClose}>
+        <Field label="Ad">
+          <Input value={draft.title || ''} onChangeText={(title) => set({ title })} placeholder="Matematik, vize, laboratuvar" />
+        </Field>
+        <Field label="Tür">
+          <Chips
+            options={[{ id: 'ders', label: 'Haftalık ders' }, { id: 'sinav', label: 'Sınav' }]}
+            value={kind}
+            onChange={(next) => set({ kind: next })}
+          />
+        </Field>
+        <Field label="Kim">
+          <Chips
+            options={(members || []).map((member) => ({ id: member.id, label: member.id === place?.meId ? `${member.name} (sen)` : member.name }))}
+            value={draft.memberId}
+            onChange={(memberId) => set({ memberId })}
+          />
+        </Field>
+        {kind === 'ders' ? (
+          <Field label="Günler">
+            <Chips
+              multiple
+              options={[1, 2, 3, 4, 5, 6, 0].map((day) => ({ id: day, label: weekdayName(day, true) }))}
+              value={weekdays}
+              onChange={(next) => set({ weekdays: next })}
+            />
+          </Field>
+        ) : (
+          <Field label="Sınav günü">
+            <DateSteppers value={draft.onceDate || todayISO()} onChange={(onceDate) => set({ onceDate })} />
+          </Field>
+        )}
+        {kind === 'ders' ? (
+          <Field label="Başlangıç">
+            <DateSteppers value={draft.startDate || todayISO()} onChange={(startDate) => set({ startDate })} />
+          </Field>
+        ) : null}
+        <Field label="Başlangıç saati">
+          <ClockField value={draft.time || '09:00'} onChange={(time) => set({ time })} />
+        </Field>
+        <Field label="Bitiş saati">
+          <ClockField allowOff value={draft.endTime} onChange={(endTime) => set({ endTime })} />
+        </Field>
+        <Field label="Yer">
+          <Input value={draft.room || ''} onChangeText={(room) => set({ room })} placeholder="Amfi, B-204" />
+        </Field>
+        <Field label="Hatırlatma">
+          <ClockField allowOff value={draft.reminderTime} onChange={(reminderTime) => set({ reminderTime })} />
+        </Field>
+        <Field label="Not">
+          <Input value={draft.notes || ''} onChangeText={(notes) => set({ notes })} placeholder="Kitap, slayt" />
+        </Field>
+        {error ? <T style={styles.error}>{error}</T> : null}
+        <Button label="Kaydet" onPress={() => {
+          if (!(draft.title || '').trim()) return setError('Dersin adını yaz.');
+          if (kind === 'ders' && !(draft.weekdays || []).length) return setError('En az bir gün seç.');
+          if (kind === 'sinav' && !draft.onceDate) return setError('Sınav gününü seç.');
+          house.saveLesson(draft);
+          onClose();
+        }} />
+        {draft.id ? <Pressable onPress={() => remove('Dersi sil', () => house.deleteLesson(draft.id))} style={styles.deleteWrap}><T weight="semi" style={styles.delete}>Sil</T></Pressable> : null}
+      </Sheet>
+    );
+  }
+
   if (type === 'need') {
     const hasDate = Boolean(draft.date);
+    const lines = Array.isArray(draft.lines) && draft.lines.length ? draft.lines : [draft.title || ''];
+    const setLine = (index, title) => {
+      const next = lines.slice();
+      next[index] = title;
+      set({ lines: next, title: next[0] || '' });
+    };
+    const goNext = (index) => {
+      if (!String(lines[index] || '').trim() && index === lines.length - 1) return;
+      if (index < lines.length - 1) {
+        lineRefs.current[index + 1]?.focus();
+        return;
+      }
+      const next = [...lines, ''];
+      set({ lines: next, title: next[0] || '' });
+      setTimeout(() => lineRefs.current[next.length - 1]?.focus(), 40);
+    };
     return (
       <Sheet title={draft.id ? 'Alınacak' : 'Alınacak ekle'} onClose={onClose}>
         <Field label="Ne lazım">
-          <Input value={draft.title || ''} onChangeText={(title) => set({ title })} placeholder="Süt, deterjan, ampul" />
+          <T weight="medium" style={styles.hint}>Geç tuşu bir alt satırı açar. Her satır ayrı bir madde olur.</T>
+          {lines.map((line, index) => (
+            <Input
+              key={`line-${index}`}
+              ref={(node) => { lineRefs.current[index] = node; }}
+              value={line}
+              onChangeText={(title) => setLine(index, title)}
+              placeholder={index === 0 ? 'Süt' : 'Sonraki madde'}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => goNext(index)}
+              style={index ? styles.lineGap : null}
+            />
+          ))}
         </Field>
         <Field label="Not">
           <Input value={draft.notes || ''} onChangeText={(notes) => set({ notes })} placeholder="Markette, iki kutu" />
@@ -890,8 +1007,16 @@ function EditorBody({ session, onChange, onClose, onPick }) {
         </Field>
         {error ? <T style={styles.error}>{error}</T> : null}
         <Button label="Kaydet" onPress={() => {
-          if (!(draft.title || '').trim()) return setError('Ne alınacağını yaz.');
-          house.saveNeed(draft);
+          const titles = lines.map((line) => line.trim()).filter(Boolean);
+          if (!titles.length) return setError('Ne alınacağını yaz.');
+          house.saveNeeds(titles.map((title, index) => ({
+            id: index === 0 ? draft.id : null,
+            title,
+            notes: draft.notes,
+            date: draft.date,
+            showOnHome: draft.showOnHome,
+            done: index === 0 ? draft.done : false,
+          })));
           onClose();
         }} />
         {draft.id ? <Pressable onPress={() => remove('Listeden sil', () => house.deleteNeed(draft.id))} style={styles.deleteWrap}><T weight="semi" style={styles.delete}>Sil</T></Pressable> : null}
@@ -960,6 +1085,7 @@ const styles = StyleSheet.create({
   placeKind: { color: colors.faint, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
   placeOpen: { color: colors.clayDeep, marginTop: 4 },
   hint: { color: colors.inkSoft, lineHeight: 20, marginBottom: 12 },
+  lineGap: { marginTop: 8 },
   status: { color: colors.ink, marginBottom: 12 },
   plan: { color: colors.inkSoft, marginTop: 10 },
   weights: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },

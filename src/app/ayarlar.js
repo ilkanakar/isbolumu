@@ -4,6 +4,7 @@ import { Alert, Linking, Pressable, ScrollView, Share, StyleSheet, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AdBanner from '../components/AdBanner.js';
 import { Mark } from '../components/Icons.js';
+import ShareSheet from '../components/ShareSheet.js';
 import T from '../components/Type.js';
 import { Button, Field, Input } from '../components/ui.js';
 import { ensurePermission, scheduleHouse } from '../services/notify.js';
@@ -17,6 +18,7 @@ export default function SettingsScreen() {
   const [name, setName] = useState(place?.name || '');
   const [backup, setBackup] = useState('');
   const [message, setMessage] = useState('');
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     setName(place?.name || '');
@@ -61,7 +63,7 @@ export default function SettingsScreen() {
 
       <View style={styles.block}>
         <T weight="serif" style={styles.blockTitle}>Bildirim</T>
-        <T weight="medium" style={styles.copy}>Fatura, iş, doğum günü ve emanet için bu telefona haber gelir.</T>
+        <T weight="medium" style={styles.copy}>Fatura, iş, ders, sınav, alınacak ve özel gün için bu telefona sesli ve titreyen haber gelir.</T>
         <Button label="Bildirimleri aç" tone="quiet" onPress={async () => {
           const ok = await ensurePermission(true);
           if (ok) {
@@ -72,9 +74,11 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.block}>
-        <T weight="serif" style={styles.blockTitle}>Bu telefonda</T>
-        <T weight="medium" style={styles.copy}>Hesap yok. Evler ve iş yerleri bu telefonda durur. İstersen yedeği yazı olarak gönderir, başka telefona yapıştırırsın.</T>
-        <Button label="Yedeği gönder" tone="quiet" onPress={share} />
+        <T weight="serif" style={styles.blockTitle}>Paylaş</T>
+        <T weight="medium" style={styles.copy}>Bu haftanın işleri, alınacaklar, dersler ve özel günler PDF olur. İstersen aynı plan telefonun takvimine yazılır.</T>
+        <Button label="İşleri paylaş" onPress={() => setShareOpen(true)} />
+        <View style={styles.gap} />
+        <Button label="Yazı yedeği gönder" tone="quiet" onPress={share} />
         <Field label="Gelen yedeği yapıştır">
           <Input value={backup} onChangeText={setBackup} multiline placeholder="{ ... }" style={styles.area} />
         </Field>
@@ -116,6 +120,7 @@ export default function SettingsScreen() {
         ) : null}
       </View>
       {message ? <T weight="medium" style={styles.message}>{message}</T> : null}
+      {shareOpen ? <ShareSheet place={place} onClose={() => setShareOpen(false)} /> : null}
       <AdBanner />
     </ScrollView>
     </View>

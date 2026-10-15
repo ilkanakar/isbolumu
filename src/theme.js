@@ -24,6 +24,7 @@ export const tones = {
   day: '#C026D3',
   loan: '#D97706',
   shop: '#0F766E',
+  class: '#4F46E5',
 };
 
 export const fonts = {
